@@ -1,0 +1,10 @@
+[project]
+name = "step-stone"
+version = "0.1.0"
+description = "A project for automatic complex task breakdown using LLMs."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "gradio>=5.49.1",
+    "pytest>=8.4.2",
+]
