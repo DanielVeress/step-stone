@@ -1,4 +1,4 @@
-name: Python CI/CD
+name: Run Tests
 
 on:
   # Triggers the workflow on push or pull request events
@@ -8,8 +8,8 @@ on:
     branches: ["main"]
 
 jobs:
-  build:
-    # Run on the latest stable version of Ubuntu
+  unit_tests:
+    name: Run Pytest on Python ${{ matrix.python-version }}
     runs-on: ubuntu-latest
 
     # Define the Python versions to test against
