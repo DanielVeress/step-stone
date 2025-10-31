@@ -1,6 +1,27 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Optional
-from task import Task
+from datetime import datetime, timezone
+from task import Task, Priority, Status
+
+def _prepare_updates(updates: Dict[str, Any]) -> Dict[str, Any]:
+    """Converts Task-specific types in the updates dictionary for MongoDB."""
+    prepared = {}
+    
+    for key, value in updates.items():
+        # Ignore ID fields
+        if key in ('_id', 'created_at'):
+            continue
+            
+        # Handle Enum types
+        if isinstance(value, (Status, Priority)):
+            prepared[key] = value.name
+        # Handle Datetime objects
+        elif isinstance(value, datetime):
+            prepared[key] = value.astimezone(timezone.utc)
+        else:
+            prepared[key] = value
+            
+    return prepared
 
 class AbstractDBConnector(ABC):
     """An abstract class that defines the required interface for any database connector."""
@@ -26,7 +47,7 @@ class AbstractDBConnector(ABC):
         pass
 
     @abstractmethod
-    def get_task(self, task_id: str) -> Optional[Dict[str, Any]]:
+    def get_task(self, task_id: str) -> Task:
         """Retrieves a task from the database by its ID."""
         pass
 
@@ -78,7 +99,21 @@ class MongoDBConnector(AbstractDBConnector):
             return None
     
     def update_task(self, task_id: str, updates: Dict[str, Any]) -> bool:
-        pass
+        # Prepare and clean the updates dictionary
+        prepared_updates = _prepare_updates(updates)
+
+        if not prepared_updates:
+            # Nothing to update after filtering ID/audit fields
+            return False 
+        
+        result = self._task_collection.update_one(
+            # Use _id for filtering
+            filter={"_id": task_id},
+            # Use the $set operator with the cleaned updates
+            update={"$set": prepared_updates}
+        )
+        
+        return result.modified_count == 1
     
 if __name__ == "__main__":
     connection_uri = "mongodb://127.0.0.1:27017"
@@ -89,7 +124,18 @@ if __name__ == "__main__":
     connector.connect()
     
     ## Do stuff...
-    connector.add_task(Task("Test_Title"))
+    task = Task("Test_Title")
+    task_id = task._id
+    connector.add_task(task)
     
+    updates = {
+        "title": "Not_Test_Title",
+        "body": "A body",
+        "status": Status.IN_PROGRESS,
+        "priority": Priority.HIGH,
+        "due_date": datetime(2025, 11, 11)
+    }
+    
+    connector.update_task(task_id, updates)
     
     connector.close()
