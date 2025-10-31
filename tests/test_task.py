@@ -45,32 +45,32 @@ def test_id_generation():
     task2 = Task(title="Test 2")
     
     # Check type and format
-    assert isinstance(task1.id, str)
-    assert len(task1.id) == 36 # Standard UUID length (including hyphens)
+    assert isinstance(task1._id, str)
+    assert len(task1._id) == 36 # Standard UUID length (including hyphens)
     
     # Check uniqueness
-    assert task1.id != task2.id
+    assert task1._id != task2._id
 
 def test_audit_timestamps(sample_task):
     """Test that created_at and updated_at are set to the same UTC time."""
     now_utc = datetime.now(timezone.utc)
     
     # Check that timestamps are datetimes and are timezone-aware (UTC)
-    assert isinstance(sample_task.created_at, datetime)
-    assert sample_task.created_at.tzinfo == timezone.utc
-    assert sample_task.updated_at.tzinfo == timezone.utc
+    assert isinstance(sample_task._created_at, datetime)
+    assert sample_task._created_at.tzinfo == timezone.utc
+    assert sample_task._updated_at.tzinfo == timezone.utc
     
     # Check that created_at and updated_at are the same at creation
-    assert sample_task.created_at == sample_task.updated_at
+    assert sample_task._created_at == sample_task._updated_at
     
     # Check that the time is very recent (within a small delta)
-    time_difference = now_utc - sample_task.created_at
+    time_difference = now_utc - sample_task._created_at
     # Allow for a small difference (e.g., 1 second) for test execution time
     assert abs(time_difference) < timedelta(seconds=1)
 
 def test_mark_updated(sample_task):
     """Test that the mark_updated method updates the updated_at timestamp."""
-    initial_updated_at = sample_task.updated_at
+    initial_updated_at = sample_task._updated_at
     
     # Simulate a time passing
     import time
@@ -79,10 +79,10 @@ def test_mark_updated(sample_task):
     sample_task.mark_updated()
     
     # The new updated_at should be greater than the initial one
-    assert sample_task.updated_at > initial_updated_at
+    assert sample_task._updated_at > initial_updated_at
     
     # The created_at should remain unchanged
-    assert sample_task.created_at == initial_updated_at 
+    assert sample_task._created_at == initial_updated_at 
 
 def test_enum_assignment():
     """Test setting different enum values explicitly."""
@@ -93,7 +93,7 @@ def test_enum_assignment():
 def test_str_representation(sample_task):
     """Test the custom __str__ method."""
     str_output = str(sample_task)
-    assert sample_task.id[:8] in str_output # Check for truncated ID
+    assert sample_task._id[:8] in str_output # Check for truncated ID
     assert sample_task.title in str_output
     assert sample_task.status.name in str_output
     assert "Task(" in str_output
