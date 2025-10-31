@@ -93,6 +93,9 @@ class Task:
                     init_data[key] = Priority[value]
                 elif key == 'due_date' and value:
                     init_data[key] = datetime.fromisoformat(value)
+                else:
+                    # Handle regular fields (strings, integers, etc.)
+                    init_data[key] = value
 
         # Create the Task object
         new_task = cls(**init_data)
