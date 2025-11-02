@@ -3,23 +3,36 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
 import uuid
+import textwrap
+from pydantic import BaseModel, Field
 
 def _generate_id() -> str:
     """Generates a unique UUID as a string."""
     return str(uuid.uuid4())
-
+    
 class Status(Enum):
     """Represents the completion status of a task."""
-    TODO = 1
-    IN_PROGRESS = 2
-    COMPLETED = 3
+    TODO = "TODO"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
     
 class Priority(Enum):
     """Represents the urgency of a task."""
-    LOW = 1
-    MEDIUM = 2
-    HIGH = 3
-    TOP = 4
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
+    TOP = "TOP"
+
+class TaskInput(BaseModel):
+    """
+    Schema for the LLM's output. Only includes fields the LLM should generate.
+    The Pydantic type hints become the JSON schema constraints.
+    """    
+    title: str = Field(..., description="A concise, descriptive title for the task.")
+    body: str = Field(default="", description="The detailed description or instructions for the task.")
+
+    due_date: Optional[datetime] = Field(None, description="The task's deadline, in ISO 8601 format (e.g., YYYY-MM-DDTHH:MM:SSZ).")
+    estimated_time: int = Field(default=0, description="The estimated time required to complete the task, in minutes.")
 
 @dataclass
 class Task:
@@ -45,9 +58,15 @@ class Task:
         now_utc = datetime.now(timezone.utc)
         self._created_at = now_utc
         self._updated_at = now_utc
-        
+    
     def __str__(self):
-        return f"Task(ID: {self._id[:8]}..., Title: '{self.title}', Status: {self.status.name}, Updated: {self._updated_at.isoformat()})"
+        return textwrap.dedent(f"""
+                Task Title: {self.title}
+                Body: {self.body}
+                Status: {self.status}
+                Priority: {self.priority}
+                Due Date: {self.due_date}
+                Estimated time: {self.estimated_time}""").strip()
 
     def mark_updated(self):
         """Manually updates the _updated_at timestamp when a modification occurs."""

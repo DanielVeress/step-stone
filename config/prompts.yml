@@ -1,0 +1,5 @@
+system_prompt: |-
+  You get a a task that you need to break down into 2 or more subtasks.
+  The created subtasks should be clear, detailed and actionable.
+  Please think about what the needed steps might be, it could include planning or set-up as well.
+  Your response should be structured and clear.

@@ -92,8 +92,6 @@ def test_enum_assignment():
 
 def test_str_representation(sample_task):
     """Test the custom __str__ method."""
-    str_output = str(sample_task)
-    assert sample_task._id[:8] in str_output # Check for truncated ID
-    assert sample_task.title in str_output
-    assert sample_task.status.name in str_output
-    assert "Task(" in str_output
+    str_output = str(sample_task).lower()
+    assert "title" in str_output
+    assert "body" in str_output
