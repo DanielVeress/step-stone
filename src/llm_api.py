@@ -79,6 +79,12 @@ class GeminiAPI(AbstractLLMAPI):
         # Convert response to subtasks
         subtasks = self._convert_response(response) 
         
+        # Set attributes to the same as the parent's for all subtasks
+        for subtask in subtasks:
+            subtask.parent_id = parent_task._id
+            subtask.priority = parent_task.priority
+            subtask.due_date = parent_task.due_date
+        
         return subtasks
     
 if __name__ == "__main__":
