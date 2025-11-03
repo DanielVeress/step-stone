@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional
+from typing import Any, Dict, Optional, List
 from datetime import datetime, timezone
 from task import Task, Priority, Status
 
@@ -98,6 +98,22 @@ class MongoDBConnector(AbstractDBConnector):
             print(f"Error retrieving task: {e}")
             return None
     
+    def get_all_tasks(self) -> List[Task]:
+        """Retrieves all tasks from the database."""
+        tasks: List[Task] = []
+        try:
+            # Use find({}) to get all documents in the collection
+            cursor = self._task_collection.find({})
+            
+            # Iterate through the cursor and convert each document to a Task object
+            for task_data in cursor:
+                tasks.append(Task.from_dict(task_data))
+                
+        except Exception as e:
+            print(f"Error retrieving all tasks: {e}")
+            
+        return tasks
+    
     def update_task(self, task_id: str, updates: Dict[str, Any]) -> bool:
         # Prepare and clean the updates dictionary
         prepared_updates = _prepare_updates(updates)
@@ -124,18 +140,13 @@ if __name__ == "__main__":
     connector.connect()
     
     ## Do stuff...
-    task = Task("Test_Title")
+    task = Task(
+        title="Do Laundry",
+        body="You have to do the laundry today."
+    )
     task_id = task._id
     connector.add_task(task)
     
-    updates = {
-        "title": "Not_Test_Title",
-        "body": "A body",
-        "status": Status.IN_PROGRESS,
-        "priority": Priority.HIGH,
-        "due_date": datetime(2025, 11, 11)
-    }
-    
-    connector.update_task(task_id, updates)
+    print(connector.get_all_tasks())
     
     connector.close()

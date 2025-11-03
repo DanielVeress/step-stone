@@ -298,3 +298,57 @@ def test_update_task_filters_ids_and_returns_false(connector):
     
     # Database should not have been called
     mock_collection.update_one.assert_not_called()
+
+def test_get_all_tasks_success(connector, sample_task):
+    """
+    Tests if get_all_tasks() calls find({}) and correctly deserializes
+    all documents into a list of Task objects.
+    """
+    conn, mock_collection = connector
+    
+    # Create two sample tasks and their serialized MongoDB dictionaries
+    task1 = sample_task
+    task2_data = {
+        "_id": "task_456",
+        "title": "Task Two",
+        "status": Status.IN_PROGRESS.name,
+        "priority": Priority.MEDIUM.name,
+        "created_at": datetime(2025, 11, 1, 12, 0, 0, tzinfo=timezone.utc),
+        "updated_at": datetime(2025, 11, 1, 12, 0, 0, tzinfo=timezone.utc),
+    }
+    
+    # Deserialize task2_data into a Task object for comparison
+    task2 = Task.from_dict(task2_data)
+
+    # Configure the mock collection to return a cursor containing the two serialized tasks
+    mock_mongo_cursor = [
+        task1.to_dict(), # Serialized dict of task1
+        task2_data        # Serialized dict of task2
+    ]
+    mock_collection.find.return_value = mock_mongo_cursor
+    
+    # Call the method under test
+    all_tasks = conn.get_all_tasks()
+    
+    # 1. Assert that the correct MongoDB operation was called
+    mock_collection.find.assert_called_once_with({})
+    
+    # 2. Assert the result is a list of two Task objects
+    assert isinstance(all_tasks, list)
+    assert len(all_tasks) == 2
+    assert all(isinstance(t, Task) for t in all_tasks)
+    
+    # 3. Assert the content of the deserialized tasks is correct
+    # Since Task.from_dict is used, we can compare attributes of the returned tasks
+    
+    # Check Task 1
+    retrieved_task1 = all_tasks[0]
+    assert retrieved_task1._id == task1._id
+    assert retrieved_task1.title == task1.title
+    assert retrieved_task1.priority == Priority.HIGH
+
+    # Check Task 2
+    retrieved_task2 = all_tasks[1]
+    assert retrieved_task2._id == task2._id
+    assert retrieved_task2.title == task2.title
+    assert retrieved_task2.status == Status.IN_PROGRESS

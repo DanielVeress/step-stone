@@ -111,7 +111,7 @@ class Task:
                 elif key == 'priority':
                     init_data[key] = Priority[value]
                 elif key == 'due_date' and value:
-                    init_data[key] = datetime.fromisoformat(value)
+                    init_data[key] = datetime.fromisoformat(str(value))
                 else:
                     # Handle regular fields (strings, integers, etc.)
                     init_data[key] = value
