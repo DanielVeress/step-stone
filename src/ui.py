@@ -157,13 +157,13 @@ def clear_form():
         gr.update(value="# Create a New Task")
     ]
 
-def load_task_list() -> List[List[str]]: # <-- Note the changed type hint
+def load_task_list() -> List[List[str]]:
     """Loads all tasks from the database and formats them for the UI."""
     tasks = db.get_all_tasks()
     formatted_tasks_rows = []
     
     # This order MUST match your gr.Dataframe headers:
-    # ["Task ID", "Title", "Status", "Priority", "Due Date", "Parent ID"]
+    # ["Task ID", "Title", "Status", "Priority", "Due Date", "Parent ID", "Actions"]
     for task in tasks:
         row = [
             str(task._id),
@@ -171,7 +171,8 @@ def load_task_list() -> List[List[str]]: # <-- Note the changed type hint
             str(task.status.value),
             str(task.priority.value),
             task.due_date.isoformat().split('+')[0] + 'Z' if task.due_date else "Not Set",
-            str(task.parent_id) if task.parent_id else "None"
+            str(task.parent_id) if task.parent_id else "None",
+            "🗑️"  # Delete button emoji
         ]
         formatted_tasks_rows.append(row)
     
@@ -208,6 +209,17 @@ def generate_subtasks(task_id: str) -> str:
     except Exception as e:
         return f"Error generating subtasks: {str(e)}"
 
+def delete_task(task_id: str) -> None:
+    """Delete a task from the database."""
+    try:
+        if db.delete_task(task_id):
+            gr.Info(f"Task {task_id} deleted successfully!")
+        else:
+            gr.Warning(f"Failed to delete task {task_id}")
+    except Exception as e:
+        gr.Warning(f"Error deleting task: {e}")
+    return None  # Return None to clear the task_state
+
 # --- Gradio UI Definition (Blocks) ---
 
 with gr.Blocks(title="Task Management UI") as demo:
@@ -222,8 +234,8 @@ with gr.Blocks(title="Task Management UI") as demo:
     with gr.Row():
         # Task List Table
         task_list = gr.Dataframe(
-            headers=["Task ID", "Title", "Status", "Priority", "Due Date", "Parent ID"],
-            datatype=["str", "str", "str", "str", "str", "str"],
+            headers=["Task ID", "Title", "Status", "Priority", "Due Date", "Parent ID", "Actions"],
+            datatype=["str", "str", "str", "str", "str", "str", "str"],
             interactive=False,
             wrap=True,
             elem_id="task_list"  # Add an ID for potential CSS styling
@@ -365,7 +377,40 @@ with gr.Blocks(title="Task Management UI") as demo:
         outputs=[task_list]
     )
     
-    # Load task when clicked in the list
+    # Handle delete button click
+    def handle_delete_click(evt: gr.SelectData, task_data: pd.DataFrame) -> Optional[Task]:
+        """Handle delete button click from the table."""
+        if evt is None or task_data.empty or evt.index[1] != 6:  # 6 is the index of the Actions column
+            return None
+            
+        try:
+            row_index = evt.index[0]
+            task_id = task_data.iloc[row_index, 0]  # Get task ID from first column
+            
+            if task_id and task_id != "N/A (New Task)":
+                return delete_task(task_id)
+        except Exception as e:
+            gr.Warning(f"Error deleting task: {e}")
+        return None
+
+    task_list.select(
+        handle_delete_click,
+        inputs=[task_list],
+        outputs=[task_state]
+    ).success(  # Refresh task list after deletion
+        load_task_list,
+        outputs=[task_list]
+    ).then(  # Clear the form if the deleted task was selected
+        load_task_data,
+        inputs=[task_state],
+        outputs=[
+            title_tb, body_tb, parent_id_tb, status_dd, priority_dd,
+            due_date_dt, estimated_time_num, task_id_display_tb,
+            created_at_display_tb, updated_at_display_tb, task_summary_md
+        ]
+    )
+
+    # Handle task selection (load task details)
     def handle_task_selection(evt: gr.SelectData, task_data: pd.DataFrame):
         """Handle task selection from the table."""
         
